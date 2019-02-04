@@ -82,7 +82,7 @@ apt-get -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold
 if [ ! -d docker_on_power ]; then
     git clone https://github.com/Unicamp-OpenPower/docker.git
 fi
-./docker_on_power/install_docker.sh
+./docker/install_docker.sh
 
 # Configuring ICP details (as described in the documentation)
 sysctl -w vm.max_map_count=262144
