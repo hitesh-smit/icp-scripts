@@ -80,7 +80,7 @@ apt-get -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold
 
 # Installing Docker
 if [ ! -d docker_on_power ]; then
-    git clone https://github.com/Unicamp-OpenPower/docker_on_power.git
+    git clone https://github.com/Unicamp-OpenPower/docker.git
 fi
 ./docker_on_power/install_docker.sh
 
