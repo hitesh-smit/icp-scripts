@@ -47,7 +47,7 @@ function ctrl_c() {
 }
 
 # Get the main IP of the host
-HOSTNAME_IP=$(ip route get 1 | awk '{print $NF;exit}')
+HOSTNAME_IP=$(/sbin/ip -4 addr show | awk '/state UP/ {getline; split($2,ip,"/"); print ip[1]}')
 HOSTNAME=$(hostname)
 
 # Move to the root directory
