@@ -18,7 +18,7 @@
     
             This script executes the installation of a single node of ICP 3.1.2.
             If you want to install the Enterprise Edition, you need to set the 
-            ICP_FILE_URL accordingly to ensure you can download/copy 
+            ICP_EE_FILE_URL accordingly to ensure you can download/copy 
             the offline package from the right place. 
             
             In order to use this script, you need to set the version of ICP you
@@ -38,6 +38,13 @@
             a ssh tunnel to access the ICP UI.
             Execute it as root :)
 '
+
+
+EXTERNAL_IP=" "
+HOSTNAME_IP=" "
+HOSTNAME=" "
+ICP_LOCATION=/opt/icp-312
+ICP_EE_FILE=ibm-cloud-private-ppc64le-3.1.2.tar.gz
 
 # Trap ctrl-c and call ctrl_c()
 trap ctrl_c INT
@@ -61,15 +68,15 @@ basic_setup() {
         echo 'Error: docker is not installed.' >&2
         if [ ! -d docker_on_power ]; then
             git clone https://github.com/Unicamp-OpenPower/docker.git
-            ./docker_on_power/install_docker.sh
+            ./docker/install_docker.sh
         fi
     fi
 
     # Configuring ICP details (as described in the documentation)
     sysctl -w vm.max_map_count=262144
-    echo "vm.max_map_count=262144" | sudo tee -a /etc/sysctl.conf
+    echo "vm.max_map_count=262144" | tee -a /etc/sysctl.conf
     sysctl -w net.ipv4.ip_local_port_range="10240  60999"
-    echo 'net.ipv4.ip_local_port_range="10240 60999"' | sudo tee -a /etc/sysctl.conf
+    echo 'net.ipv4.ip_local_port_range="10240 60999"' | tee -a /etc/sysctl.conf
 }
 
 network_setup() {
@@ -81,9 +88,8 @@ network_setup() {
     if [ -z "$1" ]; then
         EXTERNAL_IP=$HOSTNAME_IP  
     else
-        EXTERNAL_IP=$2
+        EXTERNAL_IP=$1
     fi
-    export EXTERNAL_IP
 
     # Create SSH Key and overwrite any already created
     yes y | ssh-keygen -t rsa -f /root/.ssh/id_rsa -q -P ""
@@ -113,9 +119,6 @@ icp_setup() {
     fi
     ./icp-scripts/check_ports.py
 
-    # ICP Installation directory
-    ICP_LOCATION=/opt/icp-312
-
     # Prepare environment for ICP installation
     mkdir -p $ICP_LOCATION && cd $ICP_LOCATION || exit
     docker run -v "$(pwd)":/data -e LICENSE=accept $INCEPTION cp -r cluster /data
@@ -123,7 +126,7 @@ icp_setup() {
 
     if [ "$1" == "ee" ]; then
         mkdir -p ./cluster/images
-        mv /root/$ICP_FILE ./cluster/images/
+        mv /root/$ICP_EE_FILE ./cluster/images/
     fi
 
     cd ./cluster || exit
@@ -132,25 +135,18 @@ icp_setup() {
     > ./hosts
 
     # Add the IP of the single node in the hosts file
-    echo "
-    [master]
-    $HOSTNAME_IP
-    [worker]
-    $HOSTNAME_IP
-    [proxy]
-    $HOSTNAME_IP
-    #[management]
-    #4.4.4.4
-    #[va]
-    #5.5.5.5
-    " >> ./hosts
-
-    echo "
-    image-security-enforcement:
-    clusterImagePolicy:
-        - name: "docker.io/ibmcom/*"
-        policy:
-    " >> ./config.yaml
+echo "
+[master]
+$HOSTNAME_IP
+[worker]
+$HOSTNAME_IP
+[proxy]
+$HOSTNAME_IP
+#[management]
+#4.4.4.4
+#[va]
+#5.5.5.5
+" >> ./hosts
 
     # Replace the entries in the config file to remove the comments of the external IPs
     sed -i -- "s/# cluster_lb_address: none/cluster_lb_address: $EXTERNAL_IP/g" ./config.yaml
@@ -169,29 +165,39 @@ icp_setup() {
 
 case $1 in
      ce)
-            echo "Installing ICP 3.1.2 CE"
-            basic_setup
-            network_setup $2
-            INCEPTION=ibmcom/icp-inception:3.1.2
-            docker pull $INCEPTION
-            icp_setup
+            if [ "$#" -ne 2 ]; then
+                echo "       ERROR: you need to set 2 parameters."
+                echo "       ./icp-312-single-node.sh ce <external_IP>"
+                return
+            else
+                echo "Installing ICP 3.1.2 CE"
+                basic_setup
+                network_setup $2
+                INCEPTION=ibmcom/icp-inception:3.1.2
+                docker pull $INCEPTION
+                icp_setup
+            fi
             ;;
      ee)
-            echo "Installing ICP 3.1.2 EE"
-            ICP_FILE=ibm-cloud-private-ppc64le-3.1.2.tar.gz
-            echo "What is the URL to download the EE edition?"
-            read URL
-            ICP_FILE_URL=$URL/$ICP_FILE
-            INCEPTION=ibmcom/icp-inception-$(uname -m):3.1.2-ee
-            basic_setup
-            network_setup $2
-            echo "Downloading $ICP_FILE_URL"
-            aria2c -x 16 -s 16 $ICP_FILE_URL
-            tar xf $ICP_FILE -O | docker load
-            icp_setup
+            if [ "$#" -ne 3 ]; then
+                echo "       ERROR: you need to set 3 parameters."
+                echo "       ./icp-312-single-node.sh ce <external_IP> <URL to download the EE package>"
+                return
+            else
+                echo "Installing ICP 3.1.2 EE"
+                echo $1 $2 $3
+                ICP_EE_FILE_URL=$3
+                INCEPTION=ibmcom/icp-inception-$(uname -m):3.1.2-ee
+                basic_setup
+                network_setup $2
+                echo "Downloading $ICP_EE_FILE_URL"
+                aria2c -x 16 -s 16 $ICP_EE_FILE_URL
+                tar xf $ICP_EE_FILE -O | docker load
+                icp_setup $1
+            fi
             ;;
      *)
           echo "Hmm, seems you are missing the ICP version."
-          exit 0
+          return
           ;;
 esac
