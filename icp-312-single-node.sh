@@ -33,7 +33,7 @@
                 a public IP), this will install ICP ce and use 1.2.3.4 as the
                 address where the ICP UI will be available.
             
-            If you use only ./icp-311-single-node.sh ce, this will create
+            If you use only ./icp-312-single-node.sh ce, this will create
             a cluster with a internal IP assign. In this case you may need
             a ssh tunnel to access the ICP UI.
             Execute it as root :)
@@ -104,7 +104,7 @@ network_setup() {
     sed -i '/127.0.1.1/s/^/#/g' /etc/hosts
     sed -i '/ip6-localhost/s/^/#/g' /etc/hosts
     sed -e '/nameserver/ s/^#*/#/' -i /etc/resolv.conf
-    sed -i '/search/ i nameserver 9.0.132.50' /etc/resolv.conf
+    #sed -i '/search/ i nameserver 9.0.132.50' /etc/resolv.conf
     sed -i '/search/ i nameserver 9.9.9.9' /etc/resolv.conf
     echo -e "$HOSTNAME_IP $HOSTNAME" | tee -a /etc/hosts
 
