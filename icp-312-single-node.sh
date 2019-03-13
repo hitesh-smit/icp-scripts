@@ -104,7 +104,7 @@ network_setup() {
     sed -i '/127.0.1.1/s/^/#/g' /etc/hosts
     sed -i '/ip6-localhost/s/^/#/g' /etc/hosts
     sed -e '/nameserver/ s/^#*/#/' -i /etc/resolv.conf
-    #sed -i '/search/ i nameserver 9.0.132.50' /etc/resolv.conf
+    sed -i '/search/ i nameserver 9.0.132.50' /etc/resolv.conf
     sed -i '/search/ i nameserver 9.9.9.9' /etc/resolv.conf
     echo -e "$HOSTNAME_IP $HOSTNAME" | tee -a /etc/hosts
 
